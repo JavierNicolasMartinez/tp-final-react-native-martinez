@@ -1,10 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colores, espaciado, tamanios } from '../constants/tema';
 import { useBiblioteca } from '../hooks/useBiblioteca';
 import type { Libro } from '../types';
+import { IconoDecorativo } from './IconoDecorativo';
 
 type Props = {
   libro: Libro;
@@ -32,7 +32,7 @@ export function FilaLibro({ libro }: Props) {
             : `${cantidad} ${cantidad === 1 ? 'disponible' : 'disponibles'}`}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={tamanios.icono} color={colores.textoSecundario} />
+      <IconoDecorativo nombre="chevron-forward" tamanio={tamanios.icono} color={colores.textoSecundario} />
     </Pressable>
   );
 }

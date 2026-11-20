@@ -1,7 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { colores, espaciado, tamanios } from '../constants/tema';
+import { IconoDecorativo } from './IconoDecorativo';
 
 type Props = {
   valor: string;
@@ -11,7 +11,7 @@ type Props = {
 export function CampoBusqueda({ valor, onCambiar }: Props) {
   return (
     <View style={estilos.caja}>
-      <Ionicons name="search" size={tamanios.icono} color={colores.textoSecundario} />
+      <IconoDecorativo nombre="search" tamanio={tamanios.icono} color={colores.textoSecundario} />
       <TextInput
         value={valor}
         onChangeText={onCambiar}
@@ -30,7 +30,7 @@ export function CampoBusqueda({ valor, onCambiar }: Props) {
           onPress={() => onCambiar('')}
           style={estilos.borrar}
         >
-          <Ionicons name="close-circle" size={tamanios.icono} color={colores.textoSecundario} />
+          <IconoDecorativo nombre="close-circle" tamanio={tamanios.icono} color={colores.textoSecundario} />
         </Pressable>
       )}
     </View>

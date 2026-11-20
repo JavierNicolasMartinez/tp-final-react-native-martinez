@@ -1,8 +1,8 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colores, espaciado, tamanios } from '../constants/tema';
 import type { Aviso } from '../types/biblioteca';
+import { IconoDecorativo } from './IconoDecorativo';
 
 type Props = {
   aviso: Aviso;
@@ -12,7 +12,7 @@ type Props = {
 export function AvisoApp({ aviso, onDescartar }: Props) {
   return (
     <View style={estilos.caja} accessibilityRole="alert">
-      <Ionicons name="notifications-outline" size={tamanios.icono} color={colores.primario} />
+      <IconoDecorativo nombre="notifications-outline" tamanio={tamanios.icono} color={colores.primario} />
       <Text style={estilos.texto}>{aviso.texto}</Text>
       <Pressable
         accessibilityRole="button"
@@ -20,7 +20,7 @@ export function AvisoApp({ aviso, onDescartar }: Props) {
         onPress={() => onDescartar(aviso.id)}
         style={estilos.cerrar}
       >
-        <Ionicons name="close" size={tamanios.icono} color={colores.textoSecundario} />
+        <IconoDecorativo nombre="close" tamanio={tamanios.icono} color={colores.textoSecundario} />
       </Pressable>
     </View>
   );

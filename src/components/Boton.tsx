@@ -1,8 +1,8 @@
-import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { colores, espaciado, tamanios } from '../constants/tema';
+import { IconoDecorativo } from './IconoDecorativo';
 
 type Props = {
   texto: string;
@@ -10,7 +10,7 @@ type Props = {
   variante?: 'primario' | 'secundario';
   deshabilitado?: boolean;
   pista?: string;
-  icono?: ComponentProps<typeof Ionicons>['name'];
+  icono?: ComponentProps<typeof IconoDecorativo>['nombre'];
 };
 
 export function Boton({
@@ -38,7 +38,7 @@ export function Boton({
         deshabilitado && estilos.deshabilitado,
       ]}
     >
-      {icono && <Ionicons name={icono} size={tamanios.icono} color={colorContenido} />}
+      {icono && <IconoDecorativo nombre={icono} tamanio={tamanios.icono} color={colorContenido} />}
       <Text style={[estilos.texto, esPrimario ? estilos.textoPrimario : estilos.textoSecundario]}>
         {texto}
       </Text>

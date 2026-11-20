@@ -9,7 +9,7 @@ type Props = {
 
 export function DatoLibro({ etiqueta, valor }: Props) {
   return (
-    <View style={estilos.fila}>
+    <View style={estilos.fila} accessible accessibilityLabel={`${etiqueta}: ${valor}`}>
       <Text style={estilos.etiqueta}>{etiqueta}</Text>
       <Text style={estilos.valor}>{valor}</Text>
     </View>

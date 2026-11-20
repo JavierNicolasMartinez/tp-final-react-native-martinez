@@ -40,7 +40,7 @@ export function ConfirmacionReserva({ libro }: Props) {
   if (yaReservado) {
     return (
       <View style={estilos.contenedor}>
-        <Text style={estilos.titulo}>{libro.titulo}</Text>
+        <Text style={estilos.titulo} accessibilityRole="header">{libro.titulo}</Text>
         <Text style={estilos.aviso}>Ya reservaste este libro. No se puede reservar dos veces.</Text>
         <Boton texto="Ver mis reservas" onPress={() => router.dismissTo('/reservas')} />
       </View>
@@ -49,7 +49,7 @@ export function ConfirmacionReserva({ libro }: Props) {
 
   return (
     <View style={estilos.contenedor}>
-      <Text style={estilos.titulo}>{libro.titulo}</Text>
+      <Text style={estilos.titulo} accessibilityRole="header">{libro.titulo}</Text>
       <Text style={estilos.subtitulo}>{libro.autor}</Text>
       {hayPrestamo ? (
         <Text style={estilos.exito}>

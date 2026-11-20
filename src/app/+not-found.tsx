@@ -11,7 +11,7 @@ export default function PaginaNoEncontrada() {
     <>
       <Stack.Screen options={{ title: 'Página no encontrada' }} />
       <View style={estilos.contenedor}>
-        <Text style={estilos.titulo}>Esta página no existe</Text>
+        <Text style={estilos.titulo} accessibilityRole="header">Esta página no existe</Text>
         <Text style={estilos.texto}>No encontramos nada en la dirección</Text>
         <Text style={estilos.ruta}>{ruta}</Text>
         <Boton texto="Ir al catálogo" onPress={() => router.replace('/')} />

@@ -1,9 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colores, espaciado, tamanios } from '../constants/tema';
 import { usePermiso } from '../hooks/usePermiso';
 import type { EstadoPermiso } from '../types/permisos';
+import { IconoDecorativo } from './IconoDecorativo';
 
 const TEXTOS: Record<EstadoPermiso, string> = {
   cargando: 'Revisando las notificaciones…',
@@ -17,9 +17,9 @@ export function EstadoNotificaciones() {
 
   return (
     <View style={estilos.fila}>
-      <Ionicons
-        name={estado === 'concedido' ? 'notifications' : 'notifications-off-outline'}
-        size={tamanios.icono}
+      <IconoDecorativo
+        nombre={estado === 'concedido' ? 'notifications' : 'notifications-off-outline'}
+        tamanio={tamanios.icono}
         color={estado === 'concedido' ? colores.exito : colores.textoSecundario}
       />
       <Text style={estilos.texto}>{TEXTOS[estado]}</Text>

@@ -19,7 +19,7 @@ function irAPermiso() {
 export function ZonaCamara({ estado, onCodigo }: Props) {
   if (estado === 'cargando') {
     return (
-      <View style={estilos.caja} accessibilityLabel="Revisando el permiso de la cámara">
+      <View style={estilos.caja} accessible accessibilityLabel="Revisando el permiso de la cámara">
         <ActivityIndicator size="large" color={colores.primario} />
         <Text style={estilos.texto}>Revisando el permiso de la cámara…</Text>
       </View>

@@ -1,4 +1,4 @@
-import { StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { colores, espaciado, tamanios } from '../constants/tema';
 import { useBiblioteca } from '../hooks/useBiblioteca';
@@ -36,15 +36,23 @@ export function TarjetaPrestamo({ prestamo }: Props) {
     <View style={estilos.tarjeta}>
       <Text style={estilos.titulo}>{titulo}</Text>
       <Text style={estilos.vence}>Devolvelo antes del {formatearFecha(prestamo.vence)}</Text>
-      <View style={estilos.fila}>
+      {/* Toda la fila es tocable (44 de alto): el Switch solo es más chico que eso. */}
+      <Pressable
+        accessibilityRole="switch"
+        accessibilityLabel={`Recordarme la devolución de ${titulo}`}
+        accessibilityState={{ checked: recordar }}
+        onPress={() => alCambiarRecordatorio(!recordar)}
+        style={estilos.fila}
+      >
         <Text style={estilos.etiqueta}>Recordarme</Text>
         <Switch
           value={recordar}
           onValueChange={alCambiarRecordatorio}
-          accessibilityLabel={`Recordarme la devolución de ${titulo}`}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
           trackColor={{ true: colores.primario, false: colores.borde }}
         />
-      </View>
+      </Pressable>
       <Boton texto="Devolver" variante="secundario" icono="return-down-back" onPress={alDevolver} />
     </View>
   );

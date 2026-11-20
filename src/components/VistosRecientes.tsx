@@ -1,9 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colores, espaciado, tamanios } from '../constants/tema';
 import { useBiblioteca } from '../hooks/useBiblioteca';
+import { IconoDecorativo } from './IconoDecorativo';
 
 const CANTIDAD = 3;
 
@@ -29,7 +29,7 @@ export function VistosRecientes() {
           onPress={() => router.push({ pathname: '/libro/[isbn]', params: { isbn: libro.isbn } })}
           style={estilos.fila}
         >
-          <Ionicons name="time-outline" size={tamanios.icono} color={colores.textoSecundario} />
+          <IconoDecorativo nombre="time-outline" tamanio={tamanios.icono} color={colores.textoSecundario} />
           <Text style={estilos.texto} numberOfLines={1}>
             {libro.titulo}
           </Text>

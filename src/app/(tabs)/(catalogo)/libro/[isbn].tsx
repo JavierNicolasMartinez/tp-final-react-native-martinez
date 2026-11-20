@@ -50,7 +50,7 @@ export default function DetalleLibro() {
   return (
     <ScrollView contentContainerStyle={estilos.contenido}>
       <Stack.Screen options={{ title: libro.titulo }} />
-      <Text style={estilos.titulo}>{libro.titulo}</Text>
+      <Text style={estilos.titulo} accessibilityRole="header">{libro.titulo}</Text>
       <View>
         <DatoLibro etiqueta="Autor" valor={libro.autor} />
         <DatoLibro etiqueta="Año" valor={String(libro.anio)} />

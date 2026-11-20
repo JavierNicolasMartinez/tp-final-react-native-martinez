@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -10,6 +9,7 @@ import { useRecordatorio } from '../hooks/useRecordatorio';
 import type { Recurso } from '../types/permisos';
 import { Boton } from './Boton';
 import { EstadoCargando } from './EstadoCargando';
+import { IconoDecorativo } from './IconoDecorativo';
 
 type Props = {
   recurso: Recurso;
@@ -42,12 +42,12 @@ export function PantallaPermiso({ recurso, isbn }: Props) {
 
   return (
     <View style={estilos.contenedor}>
-      <Ionicons
-        name={recurso === 'camara' ? 'camera-outline' : 'notifications-outline'}
-        size={tamanios.iconoGrande}
+      <IconoDecorativo
+        nombre={recurso === 'camara' ? 'camera-outline' : 'notifications-outline'}
+        tamanio={tamanios.iconoGrande}
         color={colores.primario}
       />
-      <Text style={estilos.titulo}>{textos.titulo}</Text>
+      <Text style={estilos.titulo} accessibilityRole="header">{textos.titulo}</Text>
       <Text style={estilos.texto}>
         {estado === 'bloqueado' ? textos.bloqueado : textos.beneficio}
       </Text>

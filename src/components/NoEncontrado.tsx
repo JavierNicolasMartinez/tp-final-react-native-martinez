@@ -12,7 +12,7 @@ type Props = {
 export function NoEncontrado({ titulo, mensaje }: Props) {
   return (
     <View style={estilos.contenedor}>
-      <Text style={estilos.titulo}>{titulo}</Text>
+      <Text style={estilos.titulo} accessibilityRole="header">{titulo}</Text>
       <Text style={estilos.mensaje}>{mensaje}</Text>
       <Boton texto="Ir al catálogo" icono="library-outline" onPress={() => router.navigate('/')} />
     </View>
