@@ -199,3 +199,9 @@ Tests:       10 passed, 10 total
 ## Capturas
 
 Están en [`docs/capturas/`](docs/capturas/). Las respuestas de las Partes B a E están en [`RESPUESTAS.md`](RESPUESTAS.md).
+
+Las capturas 01 a 11, 13 y 16 a 18 son de la versión web de la app (`npx expo start` y la tecla `w`), en tamaño de teléfono. Las que dependen del hardware o del sistema se sacan en el teléfono con Expo Go:
+
+- `12-escaner-concedido.png`: la cámara leyendo un código (en la web el lector de códigos no carga).
+- `14-escaner-bloqueado.png`: en la web `canAskAgain` siempre es `true`, así que el estado bloqueado solo se ve en el teléfono.
+- `15-notificacion-recibida.png`: las notificaciones locales no existen en la web.
