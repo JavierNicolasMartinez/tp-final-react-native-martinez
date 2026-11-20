@@ -1,9 +1,10 @@
-import { Stack } from 'expo-router';
+import { NavegacionRaiz } from '../components/NavegacionRaiz';
+import { BibliotecaProvider } from '../context/BibliotecaContext';
 
 export default function LayoutRaiz() {
   return (
-    <Stack>
-      <Stack.Screen name="index" options={{ title: 'Biblioteca IPF' }} />
-    </Stack>
+    <BibliotecaProvider>
+      <NavegacionRaiz />
+    </BibliotecaProvider>
   );
 }
