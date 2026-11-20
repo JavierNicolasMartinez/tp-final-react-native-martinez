@@ -28,6 +28,7 @@ export const tamanios = {
   subtitulo: 18,
   titulo: 22,
   icono: 24,
+  iconoGrande: 64,
   areaTactil: 44,
   radio: 8,
   borde: 1,
