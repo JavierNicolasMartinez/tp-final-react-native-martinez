@@ -7,7 +7,7 @@ Alumno: **Martínez, Javier Nicolás**.
 
 - **Expo SDK 58** (expo `~58.0.26`, expo-router `~58.0.32`, React Native `0.88.1`, React `19.3.0`).
 - TypeScript estricto, Expo Router con rutas tipadas (`experiments.typedRoutes`) y React Compiler.
-- Probado en Expo Go.
+- Se ejecuta con Expo Go en el teléfono, y también en la web (`npx expo start` y la tecla `w`).
 
 ## Cómo ejecutarlo
 
@@ -200,8 +200,8 @@ Tests:       10 passed, 10 total
 
 Están en [`docs/capturas/`](docs/capturas/). Las respuestas de las Partes B a E están en [`RESPUESTAS.md`](RESPUESTAS.md).
 
-Las capturas 01 a 11, 13 y 16 a 18 son de la versión web de la app (`npx expo start` y la tecla `w`), en tamaño de teléfono. Las que dependen del hardware o del sistema se sacan en el teléfono con Expo Go:
+Las capturas son de la versión web de la app, en tamaño de teléfono (390 × 844). Algunas necesitaron preparar el navegador:
 
-- `12-escaner-concedido.png`: la cámara leyendo un código (en la web el lector de códigos no carga).
-- `14-escaner-bloqueado.png`: en la web `canAskAgain` siempre es `true`, así que el estado bloqueado solo se ve en el teléfono.
-- `15-notificacion-recibida.png`: las notificaciones locales no existen en la web.
+- `12-escaner-concedido.png`: la cámara de prueba del navegador muestra el código de barras EAN-13 real de *Ficciones*. Después de la captura el lector lo leyó y abrió `/libro/9788499089508`, o sea que el escáner funciona de punta a punta.
+- `14-escaner-bloqueado.png`: en la web el navegador siempre deja volver a preguntar (`canAskAgain` es `true`), así que simulé la respuesta que da el teléfono cuando el permiso queda bloqueado (`denied` con `canAskAgain: false`). La pantalla es la que dibuja la app con esa respuesta.
+- `15-aviso-de-entrega-en-la-app.png`: en la web no existen las notificaciones del sistema. Muestra el camino alternativo: el personal entregó *Ficciones* desde el mostrador y, como no hay notificaciones, el aviso aparece dentro de Mis reservas.
