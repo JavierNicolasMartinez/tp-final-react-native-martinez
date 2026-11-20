@@ -29,6 +29,7 @@ export const tamanios = {
   titulo: 22,
   icono: 24,
   iconoGrande: 64,
+  alturaCamara: 300,
   areaTactil: 44,
   radio: 8,
   borde: 1,
