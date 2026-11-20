@@ -8,7 +8,7 @@ export function NavegacionRaiz() {
 
   return (
     <Stack screenOptions={opcionesEncabezado}>
-      <Stack.Screen name="index" options={{ title: 'Biblioteca IPF' }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="buscar" options={{ title: 'Buscar' }} />
       <Stack.Screen name="escanear" options={{ title: 'Escanear' }} />
       <Stack.Screen
