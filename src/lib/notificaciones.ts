@@ -75,6 +75,25 @@ export async function programarRecordatorio(titulo: string): Promise<string> {
   });
 }
 
+// Consulta el permiso en este momento (no usa un valor guardado, que puede estar viejo).
+// Devuelve false si no se pudo notificar, para que la app avise adentro.
+export async function notificarEntrega(titulo: string): Promise<boolean> {
+  const permiso = await consultarPermisoNotificaciones();
+  if (!permiso.granted) return false;
+  try {
+    await scheduleNotificationAsync({
+      content: {
+        title: '¡Ya podés retirar tu libro!',
+        body: `Te entregaron ${titulo}. Pasá a buscarlo por la biblioteca.`,
+      },
+      trigger: { channelId: CANAL_PRESTAMOS },
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function cancelarRecordatorio(id: string): Promise<void> {
   try {
     await cancelScheduledNotificationAsync(id);
