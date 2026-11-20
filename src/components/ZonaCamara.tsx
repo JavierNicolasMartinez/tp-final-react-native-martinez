@@ -29,13 +29,15 @@ export function ZonaCamara({ estado, onCodigo }: Props) {
   if (estado === 'concedido') {
     return (
       <View style={estilos.marco}>
-        <CameraView
-          style={estilos.camara}
-          facing="back"
-          barcodeScannerSettings={{ barcodeTypes: ['ean13'] }}
-          onBarcodeScanned={({ data }) => onCodigo(data)}
-          accessibilityLabel="Cámara: apuntá al código de barras de la contratapa"
-        />
+        <View style={estilos.visor}>
+          <CameraView
+            style={estilos.camara}
+            facing="back"
+            barcodeScannerSettings={{ barcodeTypes: ['ean13'] }}
+            onBarcodeScanned={({ data }) => onCodigo(data)}
+            accessibilityLabel="Cámara: apuntá al código de barras de la contratapa"
+          />
+        </View>
         <Text style={estilos.ayuda}>Apuntá al código de barras de la contratapa.</Text>
       </View>
     );
@@ -78,10 +80,15 @@ const estilos = StyleSheet.create({
   marco: {
     gap: espaciado.sm,
   },
-  camara: {
+  // El alto va en el visor: en la web CameraView ocupa el espacio del padre con flex
+  // y no respeta un height propio.
+  visor: {
     height: tamanios.alturaCamara,
     borderRadius: tamanios.radio,
     overflow: 'hidden',
+  },
+  camara: {
+    flex: 1,
   },
   ayuda: {
     fontSize: tamanios.textoChico,
