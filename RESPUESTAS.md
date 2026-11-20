@@ -184,3 +184,143 @@ Lo mismo para entregar (`BibliotecaContext.tsx:165-167`) y para la pila de recie
 Cuando cambia el `value` del Context, se vuelven a renderizar **todos los componentes que lo leen** con `useBiblioteca` (que adentro usa `useContext`). La pantalla del Catálogo en sí no lee el Context, pero sus hijos sí: `VistosRecientes` y cada `FilaLibro` (esta última para mostrar los disponibles). Entonces sí: si activo "Recordarme" en la otra pestaña, cambia `prestamos`, el `value` es un objeto nuevo (`BibliotecaContext.tsx:196-235`) y esos componentes se vuelven a renderizar, aunque el Catálogo esté escondido.
 
 Para evitarlo podría separar el Context en varios (por ejemplo uno solo para recientes) o usar una librería con selectores, que avisa solo a quien lee la parte que cambió. En una app de este tamaño no vale la pena: son 16 filas y el render es instantáneo. Antes de complicar el código lo mediría con el Profiler de React DevTools, y solo si viera un problema real lo separaría.
+
+# Parte C · Navegación y rutas
+
+## C1. La pila en tu app
+
+En mi app hay dos Stacks: el **Stack raíz** (`src/app/_layout.tsx` con `NavegacionRaiz`) y el **Stack de la tab Catálogo** (`src/app/(tabs)/(catalogo)/_layout.tsx`). La tab "Mis reservas" no tiene Stack propio, es una sola pantalla. Escribo las pilas de base a tope.
+
+| # | Acción | Pilas resultantes |
+|---|---|---|
+| 1 | Abre la app. | Stack raíz: `(tabs)`. Stack de Catálogo: `Catálogo`. Tab activa: Catálogo. |
+| 2 | Toca un libro del Catálogo. | Stack raíz: `(tabs)`. Stack de Catálogo: `Catálogo → Detalle`. |
+| 3 | Toca "Reservar". | Stack raíz: `(tabs) → Reservar (modal)`. Stack de Catálogo: `Catálogo → Detalle` (queda abajo, tapado por el modal). |
+| 4 | Toca "Confirmar". | Stack raíz: `(tabs)` (el modal se fue). Tab activa: Mis reservas. Stack de Catálogo: sigue `Catálogo → Detalle`. |
+| 5 | Toca atrás (Android). | Stack raíz: `(tabs)`. Tab activa: Catálogo, que muestra el tope de su Stack: `Catálogo → Detalle`. O sea, la persona ve el Detalle. |
+| 6 | Toca la tab "Catálogo". | Stack raíz: `(tabs)`. Stack de Catálogo: `Catálogo` (vuelve al tope). |
+
+[COMPLETAR JAVIER: en el teléfono Android hacer los pasos 1 a 6 y anotar qué se ve en el 5 y en el 6. (Predicción: en el 5 atrás no vuelve al modal de confirmación, cambia a la tab Catálogo y se ve el Detalle del libro; en el 6, como la tab Catálogo ya está activa, tocarla otra vez vuelve al Catálogo. Si en el 5 la app se cierra en lugar de ir a Catálogo, anotarlo y corregir la fila.)]
+
+### a)
+
+Usé `router.dismissTo('/reservas')` (`src/components/ConfirmacionReserva.tsx:36-37`):
+
+```tsx
+// Cierra el modal y lleva a /reservas: la confirmación no queda en el historial.
+router.dismissTo('/reservas');
+```
+
+`dismissTo` va sacando pantallas del Stack raíz hasta llegar a la que tiene `/reservas`. Como `(tabs)` ya está abajo del modal, saca el modal y cambia a la tab Mis reservas. La confirmación desaparece del historial.
+
+- Con **push**, `/reservas` se apilaría arriba del modal (una segunda copia de las tabs). Al tocar atrás volverías a la confirmación y podrías tocar "Confirmar" otra vez.
+- Con **replace**, el modal se cambia por una pantalla nueva de tabs. Atrás ya no vuelve a la confirmación, pero quedan dos copias de las tabs una arriba de la otra, y atrás te lleva a las tabs viejas.
+- Con **dismissTo** no se duplica nada: se reutilizan las tabs que ya estaban.
+
+Lo elegí por la idea que ya usé en el TP 2: una pantalla de paso, que solo existe para tomar una decisión que ya se tomó, no tiene que quedar en el historial.
+
+### b)
+
+Depende de dónde esté parada la persona cuando toca la tab. Lo probé en la versión web:
+
+- Si está en **Mis reservas** y toca "Catálogo", ve el **Detalle**, porque cada tab guarda su propio Stack tal como lo dejaste.
+- Si ya está en la tab Catálogo (como después del paso 5) y la vuelve a tocar, el Stack de la tab vuelve al tope y ve el **Catálogo**.
+
+Me parece correcto para esta app. Guardar el Stack sirve si cambiaste de tab un segundo para mirar tus reservas y querés volver al libro que estabas leyendo. Y si querés volver al inicio, tocás la tab otra vez, que es lo que la gente espera de las apps con tabs.
+
+## C2. El escáner que dispara de más
+
+### a)
+
+Cada llamada a `router.push` mete una acción de navegación en la cola del navegador, y esas acciones se ejecutan todas, en orden. Es lo mismo que vimos en el TP 2: dos toques son dos pantallas. Si el código queda frente a la cámara un segundo, `onBarcodeScanned` puede llamar diez veces y se apilarían diez Detalles iguales. Para volver habría que tocar atrás diez veces.
+
+### b)
+
+Usé `useRef` (`src/hooks/useLectorIsbn.ts:7-9`):
+
+```tsx
+// Un ref cambia al instante; un estado recién se ve en el próximo render,
+// y la cámara puede llamar varias veces antes de que ese render ocurra.
+const yaNavego = useRef(false);
+```
+
+Al principio de `abrir` pregunto `if (yaNavego.current) return;` (`useLectorIsbn.ts:14`), y lo pongo en `true` justo antes de navegar (`useLectorIsbn.ts:32`).
+
+Un `useState` puesto en `true` no alcanza porque el valor nuevo recién aparece en el próximo render. Las llamadas de `onBarcodeScanned` que llegan antes de ese render usan la función del render anterior, y esa función tiene guardado (por clausura) el valor viejo, `false`. Entonces todas pasan el `if` y todas navegan. El ref, en cambio, es un objeto único que dura toda la vida del componente: cuando cambio `yaNavego.current`, la próxima llamada lo ve al instante, sin esperar ningún render.
+
+### c)
+
+Porque el escáner es una pantalla de paso. Con `router.replace` (`useLectorIsbn.ts:33-34`) el escáner se cambia por el Detalle, y atrás te lleva a donde estabas antes de escanear (el Catálogo).
+
+Con `push`, al tocar atrás desde el Detalle volverías al escáner con la cámara prendida. En mi app sería peor todavía: `yaNavego` quedó en `true` porque la pantalla nunca se desmontó, así que la cámara vería el código y no haría nada. La persona quedaría frente a un escáner que no responde.
+
+### d)
+
+Muestra un aviso dentro de la pantalla ("El libro con ISBN … no está en el catálogo. Podés probar con otro.") y deja la cámara funcionando para escanear otro libro (`useLectorIsbn.ts:24-29`):
+
+```tsx
+if (!buscarLibroPorIsbn(isbn)) {
+  // El mismo código sigue frente a la cámara: ya avisamos, no repetimos el aviso.
+  if (desdeCamara && ultimoDesconocido.current === isbn) return;
+  ultimoDesconocido.current = isbn;
+  setAviso(`El libro con ISBN ${isbn} no está en el catálogo. Podés probar con otro.`);
+  return;
+}
+```
+
+Para que no aparezca diez veces guardo en otro ref el último código desconocido. Si la cámara vuelve a leer el mismo, salgo sin hacer nada. Si lee uno distinto, sí aviso, porque es información nueva. Cuando el ISBN se escribe a mano el aviso sale siempre, porque ahí la persona tocó el botón a propósito.
+
+## C3. Deep links y rutas protegidas
+
+En Expo Go el esquema propio no abre la app, así que se prueba con `exp://IP:8081/--/ruta` (está explicado en el README).
+
+| Link | Qué ve la persona | Qué queda debajo en la pila | Qué parte de mi código lo decide |
+|---|---|---|---|
+| `bibliotecaipf://libro/` + un ISBN existente | El Detalle de ese libro, con su título en el header. | El Catálogo, dentro de la tab Catálogo. | `anchor: 'index'` en `src/app/(tabs)/(catalogo)/_layout.tsx:6-9` y la validación de `libro/[isbn].tsx:14-15`. |
+| `bibliotecaipf://libro/123` | "Ese código no es un ISBN" y el botón "Ir al catálogo". | El Catálogo. | `esIsbnValido` (`src/lib/catalogo.ts:4-6`) y el primer `if` de `libro/[isbn].tsx:23-33`. |
+| `bibliotecaipf://buscar?q=borges` | El buscador con "borges" escrito y los dos libros de Borges. | Las tabs con el Catálogo. | `anchor: '(tabs)'` en `src/app/_layout.tsx:12-15` y la lectura de `q` en `src/app/buscar.tsx:12`. |
+| `bibliotecaipf://mostrador` (sin sesión) | El Catálogo: sin sesión la ruta del mostrador no existe. | Nada, es la base de la pila. | `Stack.Protected guard={sesion}` en `src/components/NavegacionRaiz.tsx:39-41`. |
+| `bibliotecaipf://reserva` | Mis reservas. | Las tabs (la tab Catálogo con su Catálogo). | `<Redirect href="/reservas" />` en `src/app/reserva.tsx:5`. |
+| `bibliotecaipf://escanear` (cámara bloqueada) | El escáner con el mensaje de cámara bloqueada, el botón "Habilitar la cámara" y el campo para escribir el ISBN. | Las tabs con el Catálogo. | `calcularEstado` (`src/lib/permisos.ts:11-15`) y el último caso de `src/components/ZonaCamara.tsx:53-58`. |
+
+[COMPLETAR JAVIER: abrir cada link en Expo Go con `exp://IP:8081/--/…` (con `adb shell am start -a android.intent.action.VIEW -d "…"` o pegándolo en el navegador del teléfono), tocar atrás y anotar si lo que se ve y lo que queda debajo coincide con la tabla. (Predicción: coincide. En la versión web ya comprobé /libro/… con el Catálogo debajo, /libro/123, /mostrador sin sesión, que termina en el Catálogo, y /reserva, que termina en /reservas.)]
+
+El link `/libro/123` llega a mi pantalla de Detalle porque el router decide solo por la forma de la URL: `libro/[isbn]` es un segmento dinámico y acepta cualquier texto en esa posición. El router no sabe qué es un ISBN ni qué libros existen. La responsabilidad de responder bien es de la pantalla, o sea mía: por eso el Detalle valida que sean 13 números y que el libro exista, y si no, muestra un mensaje con salida al Catálogo (`libro/[isbn].tsx:23-45`).
+
+## C4. Foco, montaje y primer plano
+
+### a)
+
+- **`useEffect` con `[]`**: detecta el **montaje**, cuando el componente aparece por primera vez. Como las tabs dejan las pantallas montadas, corre una sola vez.
+- **`useFocusEffect`**: detecta cuando la pantalla **recibe el foco dentro de la navegación**: al cambiar de tab, al volver de otra pantalla o al cerrarse un modal. Su limpieza corre cuando pierde el foco.
+- **`AppState`**: detecta cuando **la app entera** pasa de segundo plano a primer plano (`'active'`) o al revés. Es un evento del sistema, no de la navegación.
+
+### b)
+
+- Sale a Ajustes, habilita y vuelve: se entera **`AppState`** (cambia a `'active'`). `useFocusEffect` no, porque dentro de la app la pantalla nunca perdió el foco. `useEffect` con `[]` tampoco, porque no se volvió a montar.
+- Va a Catálogo y vuelve a Mis reservas: se entera **`useFocusEffect`**. `AppState` no, porque la app nunca salió de primer plano. `useEffect` con `[]` tampoco, porque la pantalla ya estaba montada.
+
+[COMPLETAR JAVIER: con el permiso de notificaciones denegado, ir a Ajustes, habilitarlo, volver y mirar el texto de arriba de Mis reservas. (Predicción: cambia solo a "Notificaciones permitidas…" sin tocar nada.)]
+
+### c)
+
+Uso las dos, `useFocusEffect` y `AppState`, dentro de `usePermiso` (`src/hooks/usePermiso.ts:23-36`). Mis reservas lo usa a través de `EstadoNotificaciones`, y también lo usan el escáner y la pantalla previa:
+
+```tsx
+useFocusEffect(
+  useCallback(() => {
+    consultar();
+  }, [consultar]),
+);
+
+useEffect(() => {
+  const suscripcion = AppState.addEventListener('change', (estadoApp) => {
+    if (estadoApp === 'active') consultar();
+  });
+  return () => suscripcion.remove();
+}, [consultar]);
+```
+
+No uso `useEffect` con `[]` para consultar: el primer foco ya cubre el montaje. Por eso los hooks de permisos van con `{ get: false }` (`usePermiso.ts:19-20`), para no consultar dos veces al abrir.
+
+Si hubiera usado solo `useFocusEffect`, la pantalla mostraría un estado viejo en el caso de Ajustes: la persona habilita las notificaciones, vuelve, y Mis reservas sigue diciendo "bloqueadas" hasta que cambie de tab y vuelva. Si hubiera usado solo `AppState`, el estado viejo aparecería al revés: si el permiso cambia mientras estás en otra pantalla de la app (por ejemplo, lo concedés en la pantalla previa desde "Recordarme"), al volver a Mis reservas no se actualizaría.
