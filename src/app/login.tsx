@@ -1,5 +1,5 @@
-import { EstadoVacio } from '../components/EstadoVacio';
+import { FormularioLogin } from '../components/FormularioLogin';
 
 export default function Login() {
-  return <EstadoVacio mensaje="Esta pantalla todavía está en construcción." />;
+  return <FormularioLogin />;
 }
