@@ -7,7 +7,9 @@ import { esRecurso } from '../../lib/permisos';
 import { leerParametro } from '../../lib/rutas';
 
 export default function PermisoPrevio() {
-  const recurso = leerParametro(useLocalSearchParams<{ recurso: string }>().recurso);
+  const params = useLocalSearchParams<{ recurso: string; isbn?: string }>();
+  const recurso = leerParametro(params.recurso);
+  const isbn = leerParametro(params.isbn);
 
   if (!esRecurso(recurso)) {
     return (
@@ -21,7 +23,7 @@ export default function PermisoPrevio() {
   return (
     <>
       <Stack.Screen options={{ title: textosPermiso[recurso].titulo }} />
-      <PantallaPermiso recurso={recurso} />
+      <PantallaPermiso recurso={recurso} isbn={isbn || undefined} />
     </>
   );
 }

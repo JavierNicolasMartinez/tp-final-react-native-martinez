@@ -1,6 +1,7 @@
 import { FlatList, StyleSheet, Text } from 'react-native';
 
 import { AvisoApp } from '../../components/AvisoApp';
+import { EstadoNotificaciones } from '../../components/EstadoNotificaciones';
 import { MisEsperas } from '../../components/MisEsperas';
 import { TarjetaPrestamo } from '../../components/TarjetaPrestamo';
 import { TituloSeccion } from '../../components/TituloSeccion';
@@ -17,6 +18,7 @@ export default function MisReservas() {
       renderItem={({ item }) => <TarjetaPrestamo prestamo={item} />}
       ListHeaderComponent={
         <>
+          <EstadoNotificaciones />
           {avisos.map((aviso) => (
             <AvisoApp key={aviso.id} aviso={aviso} onDescartar={descartarAviso} />
           ))}

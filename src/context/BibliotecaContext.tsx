@@ -105,21 +105,17 @@ export function BibliotecaProvider({ children }: Props) {
     [disponibles, esperas, posicionEnEspera, prestamos, tienePrestamo],
   );
 
-  const devolver = useCallback(
-    (isbn: string) => {
-      setPrestamos(prestamos.filter((p) => p.isbn !== isbn));
-    },
-    [prestamos],
-  );
+  // Estas dos se llaman después de un await (programar o cancelar la notificación),
+  // por eso parten del valor anterior y no de una copia que puede estar vieja.
+  const devolver = useCallback((isbn: string) => {
+    setPrestamos((anteriores) => anteriores.filter((p) => p.isbn !== isbn));
+  }, []);
 
-  const guardarRecordatorio = useCallback(
-    (isbn: string, notificacionId: string | null) => {
-      setPrestamos(
-        prestamos.map((p) => (p.isbn === isbn ? { ...p, notificacionId } : p)),
-      );
-    },
-    [prestamos],
-  );
+  const guardarRecordatorio = useCallback((isbn: string, notificacionId: string | null) => {
+    setPrestamos((anteriores) =>
+      anteriores.map((p) => (p.isbn === isbn ? { ...p, notificacionId } : p)),
+    );
+  }, []);
 
   const entregarAlSiguiente = useCallback(
     (isbn: string) => {

@@ -4,13 +4,17 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { textosPermiso } from '../constants/permisos';
 import { colores, espaciado, tamanios } from '../constants/tema';
+import { useBiblioteca } from '../hooks/useBiblioteca';
 import { usePermiso } from '../hooks/usePermiso';
+import { useRecordatorio } from '../hooks/useRecordatorio';
 import type { Recurso } from '../types/permisos';
 import { Boton } from './Boton';
 import { EstadoCargando } from './EstadoCargando';
 
 type Props = {
   recurso: Recurso;
+  // Si se llegó desde "Recordarme", el préstamo al que hay que programarle el recordatorio.
+  isbn?: string;
 };
 
 function volver() {
@@ -18,13 +22,19 @@ function volver() {
   else router.replace('/');
 }
 
-export function PantallaPermiso({ recurso }: Props) {
+export function PantallaPermiso({ recurso, isbn }: Props) {
   const { estado, pedir, abrirAjustes } = usePermiso(recurso);
+  const { programar } = useRecordatorio();
+  const { agregarAviso } = useBiblioteca();
   const textos = textosPermiso[recurso];
 
   // El diálogo del sistema aparece recién acá, cuando la persona ya leyó para qué sirve.
   async function continuar() {
-    await pedir();
+    const concedido = estado === 'concedido' || (await pedir()).granted;
+    if (recurso === 'notificaciones' && isbn) {
+      if (concedido) await programar(isbn);
+      else agregarAviso('Sin notificaciones no podemos recordarte: revisá la fecha acá.');
+    }
     volver();
   }
 
@@ -44,7 +54,7 @@ export function PantallaPermiso({ recurso }: Props) {
       {estado === 'bloqueado' ? (
         <Boton texto="Abrir Ajustes" icono="settings-outline" onPress={abrirAjustes} />
       ) : (
-        <Boton texto="Continuar" onPress={estado === 'concedido' ? volver : continuar} />
+        <Boton texto="Continuar" onPress={continuar} />
       )}
     </View>
   );
