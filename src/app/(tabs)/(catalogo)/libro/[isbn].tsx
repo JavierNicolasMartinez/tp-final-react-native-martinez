@@ -1,4 +1,5 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Boton } from '../../../../components/Boton';
@@ -12,7 +13,12 @@ import { leerParametro } from '../../../../lib/rutas';
 export default function DetalleLibro() {
   const isbn = leerParametro(useLocalSearchParams<{ isbn: string }>().isbn);
   const libro = esIsbnValido(isbn) ? buscarLibroPorIsbn(isbn) : undefined;
-  const { disponibles, esperas, tienePrestamo, posicionEnEspera } = useBiblioteca();
+  const { disponibles, esperas, tienePrestamo, posicionEnEspera, verLibro } = useBiblioteca();
+
+  // Cada vez que se abre un detalle válido, el libro va a la pila de recientes.
+  useEffect(() => {
+    if (libro) verLibro(libro);
+  }, [libro, verLibro]);
 
   if (!esIsbnValido(isbn)) {
     return (

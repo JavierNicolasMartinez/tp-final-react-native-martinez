@@ -5,6 +5,7 @@ import { EstadoCargando } from '../../../components/EstadoCargando';
 import { EstadoError } from '../../../components/EstadoError';
 import { EstadoVacio } from '../../../components/EstadoVacio';
 import { FilaLibro } from '../../../components/FilaLibro';
+import { VistosRecientes } from '../../../components/VistosRecientes';
 import { espaciado } from '../../../constants/tema';
 import { useLibros } from '../../../hooks/useLibros';
 
@@ -19,7 +20,12 @@ export default function Catalogo() {
       data={libros}
       keyExtractor={(libro) => libro.isbn}
       renderItem={({ item }) => <FilaLibro libro={item} />}
-      ListHeaderComponent={<AccesosCatalogo />}
+      ListHeaderComponent={
+        <>
+          <AccesosCatalogo />
+          <VistosRecientes />
+        </>
+      }
       ListEmptyComponent={<EstadoVacio mensaje="Todavía no hay libros en el catálogo." />}
       contentContainerStyle={estilos.lista}
     />
