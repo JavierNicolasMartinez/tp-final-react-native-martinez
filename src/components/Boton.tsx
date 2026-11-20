@@ -1,3 +1,5 @@
+import { Ionicons } from '@expo/vector-icons';
+import type { ComponentProps } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { colores, espaciado, tamanios } from '../constants/tema';
@@ -8,6 +10,7 @@ type Props = {
   variante?: 'primario' | 'secundario';
   deshabilitado?: boolean;
   pista?: string;
+  icono?: ComponentProps<typeof Ionicons>['name'];
 };
 
 export function Boton({
@@ -16,8 +19,10 @@ export function Boton({
   variante = 'primario',
   deshabilitado = false,
   pista,
+  icono,
 }: Props) {
   const esPrimario = variante === 'primario';
+  const colorContenido = esPrimario ? colores.textoSobrePrimario : colores.primario;
 
   return (
     <Pressable
@@ -33,6 +38,7 @@ export function Boton({
         deshabilitado && estilos.deshabilitado,
       ]}
     >
+      {icono && <Ionicons name={icono} size={tamanios.icono} color={colorContenido} />}
       <Text style={[estilos.texto, esPrimario ? estilos.textoPrimario : estilos.textoSecundario]}>
         {texto}
       </Text>
@@ -47,6 +53,8 @@ const estilos = StyleSheet.create({
     paddingHorizontal: espaciado.md,
     paddingVertical: espaciado.sm,
     borderRadius: tamanios.radio,
+    flexDirection: 'row',
+    gap: espaciado.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
