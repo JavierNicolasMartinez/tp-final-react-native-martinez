@@ -44,7 +44,7 @@ En el render 2 se ve `EstadoError` con el botón (`index.tsx:16`). En el render 
 
 No, en ninguno de los dos casos. Las tabs dejan montadas las pantallas que ya visitaste, solo las esconden. Y cuando abro un detalle, el detalle se apila arriba del Catálogo en el Stack de la tab, entonces el Catálogo sigue montado abajo.
 
-[COMPLETAR JAVIER: poner un `console.log('limpieza useLibros')` dentro del `return () => { … }` de `src/hooks/useLibros.ts:26-28`, cambiar a "Mis reservas", volver, abrir un detalle y volver. Anotar si aparece el log en la consola de Metro. (Predicción: no aparece en ninguno de esos casos. Sí aparece cuando tocás "Reintentar" y cuando guardás un archivo y se recarga con Fast Refresh.) Después borrar el console.log.]
+Lo comprobé con un `console.log` temporal adentro de la limpieza (`src/hooks/useLibros.ts:26-28`), en la versión web, que usa las mismas tabs y el mismo Stack. Hice este recorrido: la primera carga falló, toqué "Reintentar", cambié a "Mis reservas", volví al Catálogo, abrí un detalle y volví. El log apareció **una sola vez**, al tocar "Reintentar" (era la limpieza del intento 0). Ni cambiar de tab ni abrir el detalle lo dispararon. Después borré el log.
 
 O sea, en mi app la limpieza corre en dos situaciones reales:
 
@@ -136,7 +136,7 @@ Cada letra hace `router.setParams({ q: texto })` (`src/app/buscar.tsx:17`). Eso 
 
 Con `router.push` cada letra apilaría otra pantalla `/buscar`. Para salir del buscador tendrías que tocar atrás una vez por cada letra ("borge", "borg", "bor"…), y cada una de esas pantallas tendría su propio efecto y su propio pedido.
 
-[COMPLETAR JAVIER: en el teléfono, buscar "borges" y tocar atrás una vez. (Predicción: vuelve directo al Catálogo.)]
+Lo comprobé en la versión web: con `/buscar?q=borges` abierto, un solo toque en la flecha de atrás me lleva al Catálogo.
 
 ## B3. Mutar o reemplazar
 
@@ -200,7 +200,7 @@ En mi app hay dos Stacks: el **Stack raíz** (`src/app/_layout.tsx` con `Navegac
 | 5 | Toca atrás (Android). | Stack raíz: `(tabs)`. Tab activa: Catálogo, que muestra el tope de su Stack: `Catálogo → Detalle`. O sea, la persona ve el Detalle. |
 | 6 | Toca la tab "Catálogo". | Stack raíz: `(tabs)`. Stack de Catálogo: `Catálogo` (vuelve al tope). |
 
-[COMPLETAR JAVIER: en el teléfono Android hacer los pasos 1 a 6 y anotar qué se ve en el 5 y en el 6. (Predicción: en el 5 atrás no vuelve al modal de confirmación, cambia a la tab Catálogo y se ve el Detalle del libro; en el 6, como la tab Catálogo ya está activa, tocarla otra vez vuelve al Catálogo. Si en el 5 la app se cierra en lugar de ir a Catálogo, anotarlo y corregir la fila.)]
+La fila 5 sale del código de Expo Router: el navegador de tabs usa por defecto `backBehavior = 'firstRoute'` (`node_modules/expo-router/build/react-navigation/routers/TabRouter.js:240`). O sea, atrás desde una tab que no es la primera vuelve a la primera (Catálogo) en lugar de cerrar la app. Y nunca vuelve al modal, porque `dismissTo` ya lo sacó de la pila. La fila 6 la probé en la versión web: tocando la tab Catálogo desde otra tab aparece el Detalle, y tocándola otra vez vuelve al Catálogo.
 
 ### a)
 
@@ -281,9 +281,9 @@ En Expo Go el esquema propio no abre la app, así que se prueba con `exp://IP:80
 | `bibliotecaipf://buscar?q=borges` | El buscador con "borges" escrito y los dos libros de Borges. | Las tabs con el Catálogo. | `anchor: '(tabs)'` en `src/app/_layout.tsx:12-15` y la lectura de `q` en `src/app/buscar.tsx:12`. |
 | `bibliotecaipf://mostrador` (sin sesión) | El Catálogo: sin sesión la ruta del mostrador no existe. | Nada, es la base de la pila. | `Stack.Protected guard={sesion}` en `src/components/NavegacionRaiz.tsx:39-41`. |
 | `bibliotecaipf://reserva` | Mis reservas. | Las tabs (la tab Catálogo con su Catálogo). | `<Redirect href="/reservas" />` en `src/app/reserva.tsx:5`. |
-| `bibliotecaipf://escanear` (cámara bloqueada) | El escáner con el mensaje de cámara bloqueada, el botón "Habilitar la cámara" y el campo para escribir el ISBN. | Las tabs con el Catálogo. | `calcularEstado` (`src/lib/permisos.ts:11-15`) y el último caso de `src/components/ZonaCamara.tsx:53-58`. |
+| `bibliotecaipf://escanear` (cámara bloqueada) | El escáner con el mensaje de cámara bloqueada, el botón "Habilitar la cámara" y el campo para escribir el ISBN. | Las tabs con el Catálogo. | `calcularEstado` (`src/lib/permisos.ts:11-15`) y el último caso de `src/components/ZonaCamara.tsx:55-60`. |
 
-[COMPLETAR JAVIER: abrir cada link en Expo Go con `exp://IP:8081/--/…` (con `adb shell am start -a android.intent.action.VIEW -d "…"` o pegándolo en el navegador del teléfono), tocar atrás y anotar si lo que se ve y lo que queda debajo coincide con la tabla. (Predicción: coincide. En la versión web ya comprobé /libro/… con el Catálogo debajo, /libro/123, /mostrador sin sesión, que termina en el Catálogo, y /reserva, que termina en /reservas.)]
+Probé cada ruta en la versión web abriendo la URL directa, que es lo mismo que hace un deep link (el router arma la pila a partir de la URL), y después toqué la flecha de atrás para ver qué quedaba debajo. Todo coincide con la tabla. Para la cámara bloqueada simulé la respuesta del sistema (`denied` y sin poder volver a preguntar), porque en la web el navegador siempre deja volver a preguntar. Un detalle que vi: al volver de `/libro/…` la URL del Catálogo queda `/?isbn=…`, porque el anchor recibe los mismos parámetros. No cambia nada de lo que se ve.
 
 El link `/libro/123` llega a mi pantalla de Detalle porque el router decide solo por la forma de la URL: `libro/[isbn]` es un segmento dinámico y acepta cualquier texto en esa posición. El router no sabe qué es un ISBN ni qué libros existen. La responsabilidad de responder bien es de la pantalla, o sea mía: por eso el Detalle valida que sean 13 números y que el libro exista, y si no, muestra un mensaje con salida al Catálogo (`libro/[isbn].tsx:23-45`).
 
@@ -300,7 +300,7 @@ El link `/libro/123` llega a mi pantalla de Detalle porque el router decide solo
 - Sale a Ajustes, habilita y vuelve: se entera **`AppState`** (cambia a `'active'`). `useFocusEffect` no, porque dentro de la app la pantalla nunca perdió el foco. `useEffect` con `[]` tampoco, porque no se volvió a montar.
 - Va a Catálogo y vuelve a Mis reservas: se entera **`useFocusEffect`**. `AppState` no, porque la app nunca salió de primer plano. `useEffect` con `[]` tampoco, porque la pantalla ya estaba montada.
 
-[COMPLETAR JAVIER: con el permiso de notificaciones denegado, ir a Ajustes, habilitarlo, volver y mirar el texto de arriba de Mis reservas. (Predicción: cambia solo a "Notificaciones permitidas…" sin tocar nada.)]
+En la web no existen las notificaciones del sistema, así que este caso no lo pude ver funcionando. Por el código, al volver de Ajustes el listener de `AppState` (`src/hooks/usePermiso.ts:30-36`) vuelve a consultar el permiso y el texto de arriba de Mis reservas cambia solo a "Notificaciones permitidas…", sin tocar nada.
 
 ### c)
 
@@ -340,13 +340,13 @@ Un detalle de mi app: al tocar "Escanear" se abre el escáner, que en estado pre
 | 5 | Toca "Escanear" otra vez. | **Bloqueado**. "Habilitar la cámara" abre la pantalla previa, que ahora muestra "Abrir Ajustes". | `denied` | `false` |
 | 6 | "Abrir Ajustes" → habilita la cámara → vuelve a la app. | La pantalla previa se actualiza sola a **concedido** y muestra "Continuar". Al tocarlo vuelve al escáner, que ya muestra la cámara. | `granted` | `true` |
 
-[COMPLETAR JAVIER: hacer el recorrido en el teléfono Android (con Expo Go recién instalado o borrándole los permisos) y anotar si cada fila coincide. (Predicción: coincide. En Android 11 o más el segundo "No permitir" deja `canAskAgain` en `false`. Ojo: en Expo Go el permiso es de la app Expo Go, así que "Abrir Ajustes" abre los ajustes de Expo Go.)]
+La tabla sale de cómo está programada mi app (`calcularEstado` y `PantallaPermiso`) y de cómo funciona Android: desde Android 11, si la persona rechaza el mismo permiso dos veces, el sistema deja de mostrar el diálogo y `canAskAgain` pasa a `false`. Las pantallas de cada estado las saqué en la versión web: preguntable (captura 13), bloqueado (captura 14, simulando `canAskAgain: false`) y concedido (captura 12). Un detalle de Expo Go: el permiso queda a nombre de la app Expo Go, así que "Abrir Ajustes" abre los ajustes de Expo Go.
 
 ### a)
 
 En iOS el diálogo del sistema aparece **una sola vez**. El resultado cambia en el **paso 2**: después del primer "No permitir", iOS ya devuelve `status: denied` con `canAskAgain: false`. Entonces en el paso 3 mi app muestra directamente el estado **bloqueado**, y la pantalla previa ofrece "Abrir Ajustes" en lugar de "Continuar". El paso 4 tal como está escrito no existe en iOS: no hay forma de volver a ver el diálogo.
 
-[COMPLETAR JAVIER: si tenés un iPhone, confirmarlo. Si no, dejar esta respuesta como razonamiento.]
+Esto lo razono a partir de cómo pide los permisos iOS: el diálogo del sistema sale una sola vez por app.
 
 ### b)
 
@@ -509,7 +509,7 @@ No pude verificar del todo en Expo Go:
 
 Para verificarlos haría una development build (`npx expo run:android` o `eas build --profile development`) y revisaría los archivos nativos que genera `npx expo prebuild`. Lo que sí revisé sin compilar fue `npx expo config --type introspect`, que muestra el manifiesto y el Info.plist que se generarían: quedan `INTERNET`, `VIBRATE` y `CAMERA` más los de `expo-notifications`, y en iOS solo `NSCameraUsageDescription` con mi texto.
 
-[COMPLETAR JAVIER: en el teléfono Android, después de activar "Recordarme" y conceder el permiso, entrar a Ajustes → Apps → Expo Go → Notificaciones y anotar si aparece el canal "Préstamos". (Predicción: aparece.)]
+El canal lo crea la app en tiempo de ejecución (`src/lib/notificaciones.ts:39-46`), así que en Expo Go tendría que aparecer con el nombre "Préstamos" dentro de los ajustes de notificaciones de Expo Go, no de una app propia. No lo pude ver porque en la web no hay canales de notificación.
 
 # Parte E · Buenas prácticas y decisiones de diseño
 
@@ -631,7 +631,7 @@ Para las notificaciones no me serviría. Un componente decide qué mostrar cuand
 | `obtenerLibros()` falla | "No pudimos cargar el catálogo. Revisá tu conexión y probá de nuevo." y el botón "Reintentar". | `src/hooks/useLibros.ts:23-25` y `src/app/(tabs)/(catalogo)/index.tsx:16` |
 | Se abre `/libro/abc` | "Ese código no es un ISBN" con la explicación y "Ir al catálogo". | `src/app/(tabs)/(catalogo)/libro/[isbn].tsx:23-33` |
 | Se escanea un ISBN que no está en el catálogo | Un aviso ("El libro con ISBN … no está en el catálogo. Podés probar con otro.") una sola vez por código; la cámara sigue andando. | `src/hooks/useLectorIsbn.ts:24-29` |
-| La cámara está bloqueada | "La cámara está bloqueada… Podés habilitarla en Ajustes o escribir el ISBN a mano", el botón "Habilitar la cámara" (que lleva a "Abrir Ajustes") y el campo para escribir el ISBN. | `src/components/ZonaCamara.tsx:53-58` y `src/components/PantallaPermiso.tsx:54-58` |
+| La cámara está bloqueada | "La cámara está bloqueada… Podés habilitarla en Ajustes o escribir el ISBN a mano", el botón "Habilitar la cámara" (que lleva a "Abrir Ajustes") y el campo para escribir el ISBN. | `src/components/ZonaCamara.tsx:55-60` y `src/components/PantallaPermiso.tsx:54-58` |
 | Las notificaciones están denegadas | Arriba de Mis reservas: "Notificaciones bloqueadas: los avisos te aparecen acá, dentro de la app." Los avisos (entrega, recordatorio no programado) aparecen como tarjetas en Mis reservas. | `src/components/EstadoNotificaciones.tsx:12`, `src/components/PantallaPermiso.tsx:34-37` y `src/app/mostrador.tsx:29-34` |
 | Se intenta reservar un libro ya reservado | En el detalle, en lugar del botón: "Ya tenés este libro prestado" o "Estás en la lista de espera, en el lugar N". Si se llega al modal por URL: "Ya reservaste este libro. No se puede reservar dos veces." | `libro/[isbn].tsx:61-73`, `src/components/ConfirmacionReserva.tsx:40-48` y `src/context/BibliotecaContext.tsx:128-130` |
 | "Entregar al siguiente" con la lista de espera vacía | "Nadie está esperando este libro." y el botón deshabilitado. Si igual llegara a ejecutarse: "Nadie está esperando …: no hay a quién entregarlo." | `src/components/FilaMostrador.tsx:21` y `31`, `src/app/mostrador.tsx:24-27` |
