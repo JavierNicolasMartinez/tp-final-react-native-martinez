@@ -324,3 +324,189 @@ useEffect(() => {
 No uso `useEffect` con `[]` para consultar: el primer foco ya cubre el montaje. Por eso los hooks de permisos van con `{ get: false }` (`usePermiso.ts:19-20`), para no consultar dos veces al abrir.
 
 Si hubiera usado solo `useFocusEffect`, la pantalla mostraría un estado viejo en el caso de Ajustes: la persona habilita las notificaciones, vuelve, y Mis reservas sigue diciendo "bloqueadas" hasta que cambie de tab y vuelva. Si hubiera usado solo `AppState`, el estado viejo aparecería al revés: si el permiso cambia mientras estás en otra pantalla de la app (por ejemplo, lo concedés en la pantalla previa desde "Recordarme"), al volver a Mis reservas no se actualizaría.
+
+# Parte D · Permisos en tu app
+
+## D1. Recorrido completo de la cámara
+
+Un detalle de mi app: al tocar "Escanear" se abre el escáner, que en estado preguntable muestra para qué sirve la cámara, el botón "Usar la cámara" y el campo para escribir el ISBN. "Usar la cámara" abre la pantalla previa `/permisos/camara`, y ahí está el único botón ("Continuar" o "Abrir Ajustes").
+
+| # | Acción | Qué muestra mi app | status | canAskAgain |
+|---|---|---|---|---|
+| 1 | Toca "Escanear" por primera vez. | Escáner en estado **preguntable**: "Usamos tu cámara para…", botón "Usar la cámara" y el campo del ISBN. Al tocar "Usar la cámara" aparece la pantalla previa con "Continuar". | `undetermined` | `true` |
+| 2 | "Continuar" → "No permitir". | Vuelve al escáner, otra vez **preguntable**. Se puede seguir escribiendo el ISBN. | `denied` | `true` |
+| 3 | Toca "Escanear" otra vez. | Lo mismo: **preguntable**, y la pantalla previa sigue mostrando "Continuar". | `denied` | `true` |
+| 4 | "Continuar" → "No permitir". | Escáner en estado **bloqueado**: "La cámara está bloqueada…", botón "Habilitar la cámara" y el campo del ISBN. | `denied` | `false` |
+| 5 | Toca "Escanear" otra vez. | **Bloqueado**. "Habilitar la cámara" abre la pantalla previa, que ahora muestra "Abrir Ajustes". | `denied` | `false` |
+| 6 | "Abrir Ajustes" → habilita la cámara → vuelve a la app. | La pantalla previa se actualiza sola a **concedido** y muestra "Continuar". Al tocarlo vuelve al escáner, que ya muestra la cámara. | `granted` | `true` |
+
+[COMPLETAR JAVIER: hacer el recorrido en el teléfono Android (con Expo Go recién instalado o borrándole los permisos) y anotar si cada fila coincide. (Predicción: coincide. En Android 11 o más el segundo "No permitir" deja `canAskAgain` en `false`. Ojo: en Expo Go el permiso es de la app Expo Go, así que "Abrir Ajustes" abre los ajustes de Expo Go.)]
+
+### a)
+
+En iOS el diálogo del sistema aparece **una sola vez**. El resultado cambia en el **paso 2**: después del primer "No permitir", iOS ya devuelve `status: denied` con `canAskAgain: false`. Entonces en el paso 3 mi app muestra directamente el estado **bloqueado**, y la pantalla previa ofrece "Abrir Ajustes" en lugar de "Continuar". El paso 4 tal como está escrito no existe en iOS: no hay forma de volver a ver el diálogo.
+
+[COMPLETAR JAVIER: si tenés un iPhone, confirmarlo. Si no, dejar esta respuesta como razonamiento.]
+
+### b)
+
+La línea que decide el botón está en `src/components/PantallaPermiso.tsx:54-58`:
+
+```tsx
+{estado === 'bloqueado' ? (
+  <Boton texto="Abrir Ajustes" icono="settings-outline" onPress={abrirAjustes} />
+) : (
+  <Boton texto="Continuar" onPress={continuar} />
+)}
+```
+
+Y `estado` sale de `calcularEstado`, que mira el campo **`canAskAgain`** (`src/lib/permisos.ts:9-15`):
+
+```tsx
+// No alcanza con mirar status: "denied" puede ser preguntable o bloqueado.
+// Lo que decide si se puede volver a mostrar el diálogo es canAskAgain.
+export function calcularEstado(respuesta: PermissionResponse | null): EstadoPermiso {
+  if (respuesta === null) return 'cargando';
+  if (respuesta.granted) return 'concedido';
+  return respuesta.canAskAgain ? 'preguntable' : 'bloqueado';
+}
+```
+
+No alcanza con `status` porque en los pasos 2 y 4 de la tabla `status` vale lo mismo, `denied`, pero la situación es distinta. En el paso 2 todavía se puede preguntar; en el 4 no. Si mirara solo `status`, en el paso 4 mostraría "Continuar", la persona lo tocaría, el sistema no mostraría ningún diálogo y la app parecería rota.
+
+### c)
+
+Se entera el listener de `AppState` de `usePermiso` (`src/hooks/usePermiso.ts:30-36`). Cuando la app vuelve a primer plano (`'active'`) vuelve a consultar el permiso, `calcularEstado` da `concedido` y el botón cambia.
+
+```tsx
+useEffect(() => {
+  const suscripcion = AppState.addEventListener('change', (estadoApp) => {
+    if (estadoApp === 'active') consultar();
+  });
+  return () => suscripcion.remove();
+}, [consultar]);
+```
+
+Si esa parte no existiera, al volver de Ajustes la app seguiría mostrando "Abrir Ajustes", con el permiso viejo. Recién se actualizaría al cambiar de pantalla y volver (por el `useFocusEffect`). La persona pensaría que habilitar la cámara no funcionó.
+
+## D2. Notificaciones y consistencia
+
+### a)
+
+A los 15 segundos llegaría "Acordate de devolver tu libro… Devolvelo en la biblioteca" de un libro que **ya devolvió**. La app diría una cosa (no tenés ese préstamo) y la notificación otra. Por eso al devolver cancelo la notificación si había una programada (`src/components/TarjetaPrestamo.tsx:23-28`):
+
+```tsx
+function alDevolver() {
+  // Si quedaba un recordatorio programado, se cancela: el libro ya no está prestado.
+  if (prestamo.notificacionId) cancelarRecordatorio(prestamo.notificacionId);
+  devolver(prestamo.isbn);
+  agregarAviso(`Devolviste ${titulo}. ¡Gracias!`);
+}
+```
+
+### b)
+
+Lo guardo en el Context, adentro del préstamo (`notificacionId`), y como hice el desafío de persistencia también queda guardado en AsyncStorage.
+
+Si la app se cierra antes de que llegue:
+
+- **La notificación** llega igual. La programé en el sistema operativo, no en la app, así que no depende de que la app esté abierta.
+- **El identificador**, si solo viviera en memoria, se perdería al cerrar la app. Al volver a abrir, el interruptor "Recordarme" aparecería apagado aunque haya una notificación pendiente, y si devolvés el libro no la podrías cancelar porque no sabés su id. Ahí aparece la notificación de un libro devuelto.
+
+Mi app guarda el id, pero eso trae el problema al revés: si la notificación llegó mientras la app estaba cerrada, el id guardado ya no corresponde a nada, y el interruptor quedaría prendido sin ningún recordatorio pendiente. Lo resolví así: al arrancar, comparo los ids guardados con los que el sistema todavía tiene programados (`getAllScheduledNotificationsAsync`), y los que ya no están los limpio (`src/context/BibliotecaContext.tsx:65-87` y `src/lib/notificaciones.ts:98-106`). Así el interruptor muestra la verdad.
+
+### c)
+
+En Android 13 o más, mostrar notificaciones es un permiso que se pide en tiempo de ejecución (`POST_NOTIFICATIONS`), y el sistema muestra el diálogo recién cuando la app tiene al menos un **canal** de notificación (un canal es una categoría, como "Préstamos", que la persona puede configurar aparte en Ajustes). Si pido el permiso sin canal, el diálogo puede no aparecer. Por eso `pedirPermisoNotificaciones` crea el canal `prestamos` antes de pedir (`src/lib/notificaciones.ts:39-46` y `56-63`):
+
+```tsx
+export async function pedirPermisoNotificaciones(): Promise<NotificationPermissionsStatus> {
+  try {
+    await crearCanalPrestamos();
+    return await requestPermissionsAsync();
+  } catch {
+    return SIN_SOPORTE;
+  }
+}
+```
+
+En Android 12 no existe ese permiso en tiempo de ejecución: las notificaciones vienen permitidas al instalar la app, `requestPermissionsAsync` devuelve `granted` sin mostrar ningún diálogo y la persona solo las puede apagar desde Ajustes. El canal igual hace falta (desde Android 8 toda notificación sale por un canal), pero ya no tiene nada que ver con el diálogo.
+
+### d)
+
+Me entero por un aviso dentro de la app, en Mis reservas ("¡Te entregaron *Ficciones*! Pasá a buscarlo por la biblioteca."). El código que decide está en `src/app/mostrador.tsx:29-34`:
+
+```tsx
+if (persona === ALUMNO) {
+  const notificado = await notificarEntrega(libro.titulo);
+  if (!notificado) {
+    agregarAviso(`¡Te entregaron ${libro.titulo}! Pasá a buscarlo por la biblioteca.`);
+  }
+}
+```
+
+Y `notificarEntrega` consulta el permiso **en ese momento** (`src/lib/notificaciones.ts:79-83`):
+
+```tsx
+// Consulta el permiso en este momento (no usa un valor guardado, que puede estar viejo).
+// Devuelve false si no se pudo notificar, para que la app avise adentro.
+export async function notificarEntrega(titulo: string): Promise<boolean> {
+  const permiso = await consultarPermisoNotificaciones();
+  if (!permiso.granted) return false;
+```
+
+Importa porque el permiso lo puede cambiar la persona en Ajustes en cualquier momento, sin pasar por la app. Si usara un valor guardado de antes, podría pasar que lo crea concedido cuando ya no lo está: la notificación no aparecería y tampoco el aviso, y la persona no se enteraría de nada. O al revés, que lo crea denegado cuando ya lo habilitó, y le mande solo el aviso interno.
+
+## D3. Lo que tu app pide y lo que no
+
+| Plataforma | Permiso o clave declarada | Función de la app que lo justifica | ¿Quién lo agrega? |
+|---|---|---|---|
+| Android | `CAMERA` | Escanear el código de barras del libro. | `expo-camera` (su plugin y su manifiesto). |
+| Android | `POST_NOTIFICATIONS` | Recordatorio de devolución y aviso de entrega (Android 13+). | `expo-notifications` (su manifiesto). |
+| Android | `RECEIVE_BOOT_COMPLETED` | Que un recordatorio programado no se pierda si el teléfono se reinicia. | `expo-notifications` (su manifiesto). |
+| Android | `VIBRATE` | Vibración de las notificaciones. | La plantilla de Expo. |
+| Android | `INTERNET` | Conectarse con Metro en desarrollo (y con la API, si fuera real). | La plantilla de Expo. |
+| iOS | `NSCameraUsageDescription` = "Usamos tu cámara para leer el código de barras del libro y abrirlo al instante" | Escanear el código de barras. | El plugin de `expo-camera`, con el texto que puse en `cameraPermission`. |
+| iOS | (sin clave en Info.plist) notificaciones | Recordatorio y aviso de entrega. | `expo-notifications` lo pide en tiempo de ejecución; no necesita texto de propósito. |
+
+Esto lo saqué con `npx expo config --type introspect` y leyendo el `AndroidManifest.xml` de cada librería. Ahí también vi que `expo-file-system` (que viene con `expo`) declara `READ_EXTERNAL_STORAGE` y `WRITE_EXTERNAL_STORAGE`, y por eso los bloqueo.
+
+### a)
+
+Porque se lo dije a `expo-camera` con `recordAudioAndroid: false` (y `microphonePermission: false` para iOS). Por defecto el plugin lo agrega para poder grabar video con sonido, pero mi app solo lee códigos de barras. Además está en `blockedPermissions`, que lo saca del manifiesto final aunque alguna librería lo declare. Fragmentos de `app.json` (líneas 21-22 y 45-52):
+
+```json
+"blockedPermissions": [
+  "android.permission.RECORD_AUDIO",
+```
+
+```json
+[
+  "expo-camera",
+  {
+    "cameraPermission": "Usamos tu cámara para leer el código de barras del libro y abrirlo al instante",
+    "microphonePermission": false,
+    "recordAudioAndroid": false
+  }
+],
+```
+
+### b)
+
+Usaría `expo-image-picker` con `launchImageLibraryAsync`. Para elegir una foto de la galería no hace falta pedir permiso: la documentación dice "No permissions request is necessary for launching the image library", porque el selector del sistema solo le pasa a la app la imagen que la persona eligió. Igual tendría que revisar los permisos que suma la librería: por defecto agrega `RECORD_AUDIO` (se saca con `microphonePermission: false`) y su manifiesto trae `CAMERA` y los de almacenamiento, que yo ya tengo bloqueados.
+
+No alcanza con una actualización OTA: hace falta una **build nueva**. Una OTA solo cambia el JavaScript y los recursos, y `expo-image-picker` trae código nativo que tiene que estar compilado dentro del binario. Además su plugin modifica el manifiesto y el Info.plist, y eso también se aplica recién al compilar. (En Expo Go funcionaría sin compilar porque Expo Go ya trae ese módulo incluido, pero la app publicada no.)
+
+### c)
+
+No pude verificar del todo en Expo Go:
+
+- **El texto de propósito de la cámara**: en Expo Go el diálogo es el de Expo Go, con su propio texto. Mi `cameraPermission` se aplica recién al compilar mi app.
+- **`blockedPermissions` y `recordAudioAndroid`**: Expo Go tiene su propio manifiesto con muchísimos permisos. Lo que bloqueé en `app.json` no lo cambia.
+- **Los permisos en general**: se le dan a Expo Go, no a mi app. Por eso "Abrir Ajustes" abre los ajustes de Expo Go.
+- **El esquema `bibliotecaipf://`**: Expo Go no lo registra, por eso los deep links se prueban con `exp://…/--/`.
+- **El canal de Android**: la app lo crea en tiempo de ejecución, así que sí debería verse en Expo Go, pero dentro de los ajustes de Expo Go y no de una app propia.
+
+Para verificarlos haría una development build (`npx expo run:android` o `eas build --profile development`) y revisaría los archivos nativos que genera `npx expo prebuild`. Lo que sí revisé sin compilar fue `npx expo config --type introspect`, que muestra el manifiesto y el Info.plist que se generarían: quedan `INTERNET`, `VIBRATE` y `CAMERA` más los de `expo-notifications`, y en iOS solo `NSCameraUsageDescription` con mi texto.
+
+[COMPLETAR JAVIER: en el teléfono Android, después de activar "Recordarme" y conceder el permiso, entrar a Ajustes → Apps → Expo Go → Notificaciones y anotar si aparece el canal "Préstamos". (Predicción: aparece.)]
