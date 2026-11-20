@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { ESPERA_BUSQUEDA_MS } from '../constants/biblioteca';
 import { mensajes } from '../constants/mensajes';
 import { buscarLibros } from '../lib/api';
 import type { Libro } from '../types';
@@ -20,19 +21,23 @@ export function useBusqueda(q: string) {
     if (texto === '') return;
     let vigente = true;
     const claveDelPedido = `${intento}|${texto}`;
-    buscarLibros(texto)
-      .then((libros) => {
-        if (vigente) setResultado({ clave: claveDelPedido, libros, error: null });
-      })
-      .catch(() => {
-        if (vigente) {
-          setResultado({ clave: claveDelPedido, libros: [], error: mensajes.errorBusqueda });
-        }
-      });
+    // Debounce: solo se busca si la persona deja de escribir por un momento.
+    const temporizador = setTimeout(() => {
+      buscarLibros(texto)
+        .then((libros) => {
+          if (vigente) setResultado({ clave: claveDelPedido, libros, error: null });
+        })
+        .catch(() => {
+          if (vigente) {
+            setResultado({ clave: claveDelPedido, libros: [], error: mensajes.errorBusqueda });
+          }
+        });
+    }, ESPERA_BUSQUEDA_MS);
     // Si cambia el texto antes de que llegue la respuesta, este pedido queda vencido
     // y su respuesta se descarta aunque llegue después que la del pedido nuevo.
     return () => {
       vigente = false;
+      clearTimeout(temporizador);
     };
   }, [texto, intento]);
 

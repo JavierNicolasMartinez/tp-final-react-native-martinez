@@ -3,3 +3,6 @@ export const ALUMNO = 'Javier Martínez';
 
 export const DIAS_PRESTAMO = 7;
 export const MS_POR_DIA = 24 * 60 * 60 * 1000;
+
+// Tiempo sin escribir antes de buscar.
+export const ESPERA_BUSQUEDA_MS = 300;
