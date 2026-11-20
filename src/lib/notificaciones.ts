@@ -2,6 +2,7 @@ import { PermissionStatus } from 'expo';
 import {
   AndroidImportance,
   cancelScheduledNotificationAsync,
+  getAllScheduledNotificationsAsync,
   getPermissionsAsync,
   requestPermissionsAsync,
   scheduleNotificationAsync,
@@ -91,6 +92,16 @@ export async function notificarEntrega(titulo: string): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+// Identificadores que el sistema todavía tiene programados. null si no se pudo saber.
+export async function idsProgramados(): Promise<Set<string> | null> {
+  try {
+    const programadas = await getAllScheduledNotificationsAsync();
+    return new Set(programadas.map((n) => n.identifier));
+  } catch {
+    return null;
   }
 }
 

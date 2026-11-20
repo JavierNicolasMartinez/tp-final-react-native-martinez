@@ -1,10 +1,12 @@
-import { createContext, useCallback, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { ALUMNO } from '../constants/biblioteca';
 import { ESPERA_INICIAL } from '../data/esperaInicial';
 import { Cola } from '../estructuras/Cola';
 import { Pila } from '../estructuras/Pila';
+import { cargarEstado, guardarEstado } from '../lib/almacenamiento';
 import { calcularVencimiento } from '../lib/fechas';
+import { idsProgramados } from '../lib/notificaciones';
 import type { Libro } from '../types';
 import type { Aviso, Prestamo, ResultadoReserva } from '../types/biblioteca';
 
@@ -32,12 +34,20 @@ export type BibliotecaValor = {
 
 export const BibliotecaContext = createContext<BibliotecaValor | null>(null);
 
-function crearEsperasIniciales(): Esperas {
+function crearEsperas(listas: Record<string, string[]>): Esperas {
   const esperas: Esperas = {};
-  for (const [isbn, personas] of Object.entries(ESPERA_INICIAL)) {
+  for (const [isbn, personas] of Object.entries(listas)) {
     esperas[isbn] = new Cola(personas);
   }
   return esperas;
+}
+
+function esperasAListas(esperas: Esperas): Record<string, string[]> {
+  const listas: Record<string, string[]> = {};
+  for (const [isbn, cola] of Object.entries(esperas)) {
+    listas[isbn] = cola.aArray();
+  }
+  return listas;
 }
 
 type Props = {
@@ -45,11 +55,42 @@ type Props = {
 };
 
 export function BibliotecaProvider({ children }: Props) {
+  const [cargado, setCargado] = useState(false);
   const [prestamos, setPrestamos] = useState<Prestamo[]>([]);
-  const [esperas, setEsperas] = useState<Esperas>(crearEsperasIniciales);
+  const [esperas, setEsperas] = useState<Esperas>(() => crearEsperas(ESPERA_INICIAL));
   const [recientes, setRecientes] = useState(() => new Pila<Libro>());
   const [sesion, setSesion] = useState(false);
   const [avisos, setAvisos] = useState<Aviso[]>([]);
+
+  // Al iniciar, recupera lo guardado. Si una notificación ya llegó (o se borró)
+  // mientras la app estaba cerrada, su identificador guardado ya no sirve y se limpia.
+  useEffect(() => {
+    let vigente = true;
+    Promise.all([cargarEstado(), idsProgramados()]).then(([guardado, programados]) => {
+      if (!vigente) return;
+      if (guardado) {
+        setPrestamos(
+          guardado.prestamos.map((p) =>
+            p.notificacionId && programados && !programados.has(p.notificacionId)
+              ? { ...p, notificacionId: null }
+              : p,
+          ),
+        );
+        setRecientes(new Pila(guardado.recientes));
+        setEsperas(crearEsperas(guardado.esperas));
+      }
+      setCargado(true);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, []);
+
+  // Cada cambio se guarda. Recién después de cargar, para no pisar lo guardado con el estado inicial.
+  useEffect(() => {
+    if (!cargado) return;
+    guardarEstado({ prestamos, recientes: recientes.aArray(), esperas: esperasAListas(esperas) });
+  }, [cargado, prestamos, recientes, esperas]);
 
   const tienePrestamo = useCallback(
     (isbn: string) => prestamos.some((p) => p.isbn === isbn),
@@ -192,6 +233,10 @@ export function BibliotecaProvider({ children }: Props) {
       descartarAviso,
     ],
   );
+
+  // Mientras se lee lo guardado no se muestra nada: sigue la pantalla de inicio (splash),
+  // así la app no aparece "vacía" un instante y después se llena.
+  if (!cargado) return null;
 
   return <BibliotecaContext.Provider value={valor}>{children}</BibliotecaContext.Provider>;
 }

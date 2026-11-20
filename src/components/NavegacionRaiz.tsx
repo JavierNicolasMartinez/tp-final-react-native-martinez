@@ -1,10 +1,17 @@
 import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect } from 'react';
 
 import { opcionesEncabezado } from '../constants/navegacion';
 import { useBiblioteca } from '../hooks/useBiblioteca';
 
 export function NavegacionRaiz() {
   const { sesion } = useBiblioteca();
+
+  // Este componente se monta recién cuando el estado guardado ya está cargado.
+  useEffect(() => {
+    SplashScreen.hideAsync();
+  }, []);
 
   return (
     <Stack screenOptions={opcionesEncabezado}>
