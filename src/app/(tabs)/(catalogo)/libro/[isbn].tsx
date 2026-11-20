@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Boton } from '../../../../components/Boton';
 import { DatoLibro } from '../../../../components/DatoLibro';
-import { LibroNoEncontrado } from '../../../../components/LibroNoEncontrado';
+import { NoEncontrado } from '../../../../components/NoEncontrado';
 import { colores, espaciado, tamanios } from '../../../../constants/tema';
 import { useBiblioteca } from '../../../../hooks/useBiblioteca';
 import { buscarLibroPorIsbn, esIsbnValido } from '../../../../lib/catalogo';
@@ -24,7 +24,7 @@ export default function DetalleLibro() {
     return (
       <>
         <Stack.Screen options={{ title: 'ISBN inválido' }} />
-        <LibroNoEncontrado
+        <NoEncontrado
           titulo="Ese código no es un ISBN"
           mensaje={`"${isbn}" no sirve: un ISBN tiene 13 números, sin letras ni guiones.`}
         />
@@ -36,7 +36,7 @@ export default function DetalleLibro() {
     return (
       <>
         <Stack.Screen options={{ title: 'Libro no encontrado' }} />
-        <LibroNoEncontrado
+        <NoEncontrado
           titulo="No tenemos ese libro"
           mensaje={`No hay ningún libro con el ISBN ${isbn} en el catálogo de la biblioteca.`}
         />

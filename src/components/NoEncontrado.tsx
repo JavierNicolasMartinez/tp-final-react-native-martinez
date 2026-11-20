@@ -9,7 +9,7 @@ type Props = {
   mensaje: string;
 };
 
-export function LibroNoEncontrado({ titulo, mensaje }: Props) {
+export function NoEncontrado({ titulo, mensaje }: Props) {
   return (
     <View style={estilos.contenedor}>
       <Text style={estilos.titulo}>{titulo}</Text>
